@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Backend for Scientific Library - PDF storage with metadata extraction and hybrid search"
 authors = ["Your Name <you@example.com>"]
 license = "MIT"
-readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -17,12 +17,14 @@ pydantic-settings = "^2.6.0"
 alembic = "^1.14.0"
 arq = "^0.26.0"
 wsgidav = "^4.3.0"
-sentence-transformers = "^3.3.0"
+sentence-transformers = {version = "^3.3.0", extras = ["torch"]}
 pypdfium2 = "^4.30.0"
 httpx = "^0.28.0"
 structlog = "^24.4.0"
 bcrypt = "^4.2.0"
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+email-validator = "^2.2.0"
+pgvector = "^0.3.0"
 python-multipart = "^0.0.12"
 aiofiles = "^24.1.0"
 redis = "^5.2.0"

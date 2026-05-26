@@ -1,42 +1,52 @@
 ```
 # Dependencies
-node_modules/
+poetry.lock
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.venv/
-venv/
+.Python
 env/
-ENV/
+venv/
+.venv/
+.env
+.env.local
+.env.*
+.envrc
 
-# Build artifacts
-dist/
+# Build and distribution artifacts
 build/
+dist/
+*.egg
 *.egg-info/
+*.so
+*.whl
+
+# Testing and coverage
 .coverage
+coverage/
 htmlcov/
-.coverage.*
-.nyc_output/
+.pytest_cache/
+.mypy_cache/
 
 # Logs
 *.log
 
-# Environment variables
-.env
-.env.local
-.env.*
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# IDE specific
+# Editor files
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
-
-# OS generated
-.DS_Store
-Thumbs.db
+*.tmp
 
 # Docker
 .dockerenv

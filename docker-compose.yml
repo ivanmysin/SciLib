@@ -1,0 +1,102 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+    depends_on: [backend, frontend]
+
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
+      interval: 10s
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+  grobid:
+    image: lfoppiano/grobid:0.8.1
+    environment:
+      JAVA_OPTS: "-Xmx4g"
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+
+  backend:
+    build: ./backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+      GROBID_URL: http://grobid:8070
+      JWT_SECRET: ${JWT_SECRET}
+      STORAGE_BACKEND: local
+      STORAGE_PATH: /app/storage
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-allenai/specter2_base}
+      EMBEDDING_DIM: ${EMBEDDING_DIM:-768}
+      CROSSREF_MAILTO: ${CROSSREF_MAILTO}
+    volumes:
+      - storage_data:/app/storage
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+
+  worker:
+    build: ./backend
+    command: arq app.workers.settings.WorkerSettings
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+      GROBID_URL: http://grobid:8070
+      JWT_SECRET: ${JWT_SECRET}
+      STORAGE_BACKEND: local
+      STORAGE_PATH: /app/storage
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-allenai/specter2_base}
+      EMBEDDING_DIM: ${EMBEDDING_DIM:-768}
+      CROSSREF_MAILTO: ${CROSSREF_MAILTO}
+    volumes:
+      - storage_data:/app/storage
+      - model_cache:/app/models
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+      grobid: { condition: service_started }
+
+  frontend:
+    build: ./frontend
+    environment:
+      VITE_API_BASE: /api/v1
+
+  backup:
+    image: prodrigestivill/postgres-backup-local
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      SCHEDULE: "0 3 * * *"
+      BACKUP_KEEP_DAYS: 14
+      BACKUP_KEEP_WEEKS: 4
+    volumes:
+      - ./backups:/backups
+    depends_on: [db]
+
+volumes:
+  pg_data:
+  redis_data:
+  storage_data:
+  model_cache:
+  caddy_data:

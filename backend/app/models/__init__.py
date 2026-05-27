@@ -14,6 +14,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ENUM, INET, TSVECTOR, UUID as PG_UUID, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, relationship, mapped_column
 from sqlalchemy.sql import func
+from pgvector.sqlalchemy import Vector
 
 
 class Base(DeclarativeBase):
@@ -409,7 +410,7 @@ class DocumentEmbedding(Base):
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     section_name: Mapped[Optional[str]] = mapped_column(String(100))
     chunk_text: Mapped[str] = mapped_column(Text, nullable=False)
-    embedding: Mapped[List[float]] = mapped_column(type_=None)  # Will be set to vector(768) in DDL
+    embedding: Mapped[List[float]] = mapped_column(Vector(768))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     attachment: Mapped["Attachment"] = relationship(back_populates="embeddings")

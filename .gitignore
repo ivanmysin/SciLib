@@ -1,23 +1,18 @@
 ```
 # Dependencies
-node_modules/
+poetry.lock
+package-lock.json
+
+# Virtual environments
+.venv/
+venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.venv/
-venv/
-env/
-ENV/
 
-# Build artifacts
-dist/
-build/
-*.egg-info/
-.coverage
-htmlcov/
-.coverage.*
-.nyc_output/
+# Node modules
+node_modules/
 
 # Logs
 *.log
@@ -25,19 +20,32 @@ htmlcov/
 # Environment variables
 .env
 .env.local
-.env.*
+*.env.*
 
-# IDE specific
+# IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
-# OS generated
-.DS_Store
-Thumbs.db
+# Build artifacts
+dist/
+build/
+target/
 
 # Docker
-.dockerenv
+.dockerignore
+
+# Coverage reports
+.coverage
+coverage/
+htmlcov/
+
+# Testing
+.pytest_cache/
+.mypy_cache/
+
+# OS generated files
+.DS_Store
+Thumbs.db
 ```

@@ -11,12 +11,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install poetry
 RUN pip install poetry==2.0.0
 
-# Copy pyproject.toml and poetry.lock
-COPY pyproject.toml .
-
-# Install dependencies
+# Configure poetry for CPU-only PyTorch (reduces image size from ~3GB to ~1GB)
 RUN poetry config virtualenvs.create false \
-    && poetry install --only main --no-interaction --no-ansi
+    && poetry source add --priority=explicit pytorch-cpu https://download.pytorch.org/whl/cpu
+
+# Copy pyproject.toml and poetry.lock first for better caching
+COPY pyproject.toml poetry.lock* ./
+
+# Install dependencies (split into two layers for better cache utilization)
+RUN poetry install --only main --no-interaction --no-ansi --no-root
 
 # Copy application code
 COPY . .

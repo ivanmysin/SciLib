@@ -1,0 +1,14 @@
+node_modules
+dist
+npm-debug.log
+.env
+.env.local
+*.log
+.DS_Store
+coverage
+.gitignore
+README.md
+tests
+vitest.config.ts
+playwright.config.ts
+tsconfig.node.json

@@ -1,8 +1,14 @@
 """Users Router."""
 
-from fastapi import APIRouter, HTTPException, status
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
+
+from app.db import get_db
+from app.models import User
 
 router = APIRouter()
 
@@ -24,15 +30,29 @@ class UserUpdate(BaseModel):
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user():
+async def get_current_user(db: AsyncSession = Depends(get_db)):
     """Get current authenticated user.
     
-    TODO: Implement:
-    - Extract user from JWT token
-    - Query database for user details
-    - Include storage usage stats
+    TODO: Implement proper JWT extraction.
+    For now, returns the admin user if exists, otherwise a mock user.
     """
-    # Placeholder - mock user
+    # Try to get the first active user (for demo purposes)
+    stmt = select(User).where(User.is_blocked == False).limit(1)
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+    
+    if user:
+        return UserResponse(
+            id=str(user.id),
+            email=user.email,
+            name=user.display_name or user.email.split('@')[0],
+            is_active=True,
+            role=user.role.value,
+            storage_used_bytes=0,
+            storage_quota_bytes=int(user.storage_quota_bytes),
+        )
+    
+    # Fallback to mock user
     return UserResponse(
         id="00000000-0000-0000-0000-000000000000",
         email="user@example.com",

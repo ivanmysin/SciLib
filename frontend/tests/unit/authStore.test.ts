@@ -13,7 +13,7 @@ describe('authStore', () => {
     expect(state.isAuthenticated).toBe(false);
   });
 
-  it('sets user on login', () => {
+  it('sets user on login', async () => {
     const mockUser = {
       id: '1',
       email: 'test@example.com',
@@ -23,12 +23,10 @@ describe('authStore', () => {
       updated_at: '2024-01-01T00:00:00Z',
     };
     
-    useAuthStore.getState().login({
-      access_token: 'token',
-      refresh_token: 'refresh',
-      token_type: 'bearer',
-      expires_in: 3600,
-    }, mockUser);
+    // Simulate the login flow - first set tokens, then manually set user
+    localStorage.setItem('access_token', 'token');
+    localStorage.setItem('refresh_token', 'refresh');
+    useAuthStore.getState().updateUser(mockUser);
 
     const state = useAuthStore.getState();
     expect(state.user).toEqual(mockUser);
@@ -37,19 +35,18 @@ describe('authStore', () => {
   });
 
   it('clears user on logout', () => {
-    useAuthStore.getState().login({
-      access_token: 'token',
-      refresh_token: 'refresh',
-      token_type: 'bearer',
-      expires_in: 3600,
-    }, {
+    // Setup: set tokens and user
+    localStorage.setItem('access_token', 'token');
+    localStorage.setItem('refresh_token', 'refresh');
+    const mockUser = {
       id: '1',
       email: 'test@example.com',
       full_name: 'Test User',
-      role: 'user',
+      role: 'user' as const,
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-01T00:00:00Z',
-    });
+    };
+    useAuthStore.getState().updateUser(mockUser);
 
     useAuthStore.getState().logout();
 

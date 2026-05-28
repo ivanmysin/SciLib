@@ -40,16 +40,16 @@ smoke-test:
 	@docker compose ps db redis grobid | grep -q "running" || (echo "❌ Infrastructure services not running" && exit 1)
 	@echo "✅ Infrastructure services OK"
 	
-	@echo "2. Checking backend..."
-	@curl -sf http://localhost:8000/docs > /dev/null || (echo "❌ Backend not responding" && exit 1)
+	@echo "2. Checking backend (via Caddy HTTPS)..."
+	@curl -skf https://localhost/docs > /dev/null || (echo "❌ Backend not responding" && exit 1)
 	@echo "✅ Backend OK"
 	
-	@echo "3. Checking frontend..."
-	@curl -sf http://localhost:80 > /dev/null || (echo "❌ Frontend not responding" && exit 1)
+	@echo "3. Checking frontend (via Caddy HTTPS)..."
+	@curl -skf https://localhost/ > /dev/null || (echo "❌ Frontend not responding" && exit 1)
 	@echo "✅ Frontend OK"
 	
-	@echo "4. Checking API health..."
-	@curl -sf http://localhost:8000/api/v1/health > /dev/null || (echo "❌ Health endpoint not responding" && exit 1)
+	@echo "4. Checking API health (via Caddy HTTPS)..."
+	@curl -skf https://localhost/api/v1/admin/status > /dev/null || (echo "❌ Health endpoint not responding" && exit 1)
 	@echo "✅ Health endpoint OK"
 	
 	@echo "5. Checking worker..."

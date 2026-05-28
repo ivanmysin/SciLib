@@ -5,6 +5,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { LibraryPage } from '@/pages/LibraryPage';
 import { SearchPage } from '@/pages/SearchPage';
 import { GroupsPage } from '@/pages/GroupsPage';
+import { AdminPage } from '@/pages/AdminPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,6 +51,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <GroupsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminPage />
               </ProtectedRoute>
             }
           />

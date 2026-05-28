@@ -8,6 +8,9 @@ export function useAuth() {
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginRequest) => {
       const response = await apiClient.post<AuthTokens>('/auth/login', credentials);
+      // Store tokens in localStorage
+      localStorage.setItem('access_token', response.data.access_token);
+      localStorage.setItem('refresh_token', response.data.refresh_token);
       return response.data;
     },
     onSuccess: () => {
@@ -40,7 +43,7 @@ export function useAuth() {
     logout: logoutMutation.mutateAsync,
     user: sessionQuery.data,
     isLoading: sessionQuery.isLoading,
-    isAuthenticated: !!sessionQuery.data,
+    isAuthenticated: !!sessionQuery.data || !!localStorage.getItem('access_token'),
     error: loginMutation.error || sessionQuery.error,
   };
 }

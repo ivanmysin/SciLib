@@ -221,6 +221,9 @@ async def get_user(user_id: str, db: AsyncSession = Depends(get_db)):
 @router.post("/users/{user_id}/block")
 async def block_user(user_id: str, reason: str = "", db: AsyncSession = Depends(get_db)):
     """Block user account (admin only)."""
+    from app.models import McpAuditLog
+    from uuid import uuid4 as gen_uuid4
+    
     try:
         uuid = UUID(user_id)
     except ValueError:
@@ -242,13 +245,26 @@ async def block_user(user_id: str, reason: str = "", db: AsyncSession = Depends(
     user.is_blocked = True
     await db.flush()
     
-    # TODO: Log to audit table
+    # Log to audit table
+    audit_entry = McpAuditLog(
+        user_id=uuid,
+        tool_name="block_user",
+        tool_arguments={"user_id": str(uuid), "reason": reason},
+        result_summary={"success": True, "email": user.email},
+        success=True,
+        duration_ms=0,
+    )
+    db.add(audit_entry)
+    await db.commit()
+    
     return {"message": f"User {user.email} blocked", "reason": reason}
 
 
 @router.post("/users/{user_id}/unblock")
 async def unblock_user(user_id: str, db: AsyncSession = Depends(get_db)):
     """Unblock user account (admin only)."""
+    from app.models import McpAuditLog
+    
     try:
         uuid = UUID(user_id)
     except ValueError:
@@ -270,13 +286,26 @@ async def unblock_user(user_id: str, db: AsyncSession = Depends(get_db)):
     user.is_blocked = False
     await db.flush()
     
-    # TODO: Log to audit table
+    # Log to audit table
+    audit_entry = McpAuditLog(
+        user_id=uuid,
+        tool_name="unblock_user",
+        tool_arguments={"user_id": str(uuid)},
+        result_summary={"success": True, "email": user.email},
+        success=True,
+        duration_ms=0,
+    )
+    db.add(audit_entry)
+    await db.commit()
+    
     return {"message": f"User {user.email} unblocked"}
 
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user_id: str, db: AsyncSession = Depends(get_db)):
     """Soft-delete user account (admin only)."""
+    from app.models import McpAuditLog
+    
     try:
         uuid = UUID(user_id)
     except ValueError:
@@ -299,33 +328,95 @@ async def delete_user(user_id: str, db: AsyncSession = Depends(get_db)):
     # TODO: Also anonymize email, revoke tokens, etc.
     await db.flush()
     
-    # TODO: Log to audit table
+    # Log to audit table
+    audit_entry = McpAuditLog(
+        user_id=uuid,
+        tool_name="delete_user",
+        tool_arguments={"user_id": str(uuid)},
+        result_summary={"success": True, "email": user.email},
+        success=True,
+        duration_ms=0,
+    )
+    db.add(audit_entry)
+    await db.commit()
 
 
 @router.get("/settings")
 async def get_settings_endpoint(db: AsyncSession = Depends(get_db)):
     """Get system settings (admin only)."""
-    from app.models import Base
-    # Check if system_settings table exists and read from it
-    try:
-        stmt = select(func.count()).select_from(Base.metadata.tables.get('system_settings'))
-        result = await db.execute(stmt)
-        # For now, return defaults
-    except Exception:
-        pass
+    from app.models import SystemSettings
+    from decimal import Decimal
     
-    return {
+    defaults = {
         "maintenance_mode": False,
         "registration_enabled": True,
         "max_upload_size_mb": 100,
         "default_quota_gb": 10,
     }
+    
+    try:
+        stmt = select(SystemSettings)
+        result = await db.execute(stmt)
+        settings_rows = result.scalars().all()
+        
+        if settings_rows:
+            for setting in settings_rows:
+                if setting.key == 'maintenance_mode':
+                    defaults['maintenance_mode'] = setting.value.get('value', False)
+                elif setting.key == 'registration_enabled':
+                    defaults['registration_enabled'] = setting.value.get('value', True)
+                elif setting.key == 'max_upload_size_mb':
+                    defaults['max_upload_size_mb'] = setting.value.get('value', 100)
+                elif setting.key == 'default_quota_gb':
+                    defaults['default_quota_gb'] = setting.value.get('value', 10)
+    except Exception:
+        pass
+    
+    return defaults
 
 
 @router.put("/settings")
 async def update_settings_endpoint(settings: dict, db: AsyncSession = Depends(get_db)):
     """Update system settings (admin only)."""
-    # TODO: Write to system_settings table
+    from app.models import SystemSettings
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+    
+    settings_to_save = []
+    
+    if 'maintenance_mode' in settings:
+        settings_to_save.append({
+            'key': 'maintenance_mode',
+            'value': {'value': bool(settings['maintenance_mode'])}
+        })
+    if 'registration_enabled' in settings:
+        settings_to_save.append({
+            'key': 'registration_enabled',
+            'value': {'value': bool(settings['registration_enabled'])}
+        })
+    if 'max_upload_size_mb' in settings:
+        settings_to_save.append({
+            'key': 'max_upload_size_mb',
+            'value': {'value': int(settings['max_upload_size_mb'])}
+        })
+    if 'default_quota_gb' in settings:
+        settings_to_save.append({
+            'key': 'default_quota_gb',
+            'value': {'value': int(settings['default_quota_gb'])}
+        })
+    
+    for setting_data in settings_to_save:
+        stmt = pg_insert(SystemSettings).values(
+            key=setting_data['key'],
+            value=setting_data['value'],
+            updated_at=func.now()
+        ).on_conflict_do_update(
+            index_elements=['key'],
+            set_={'value': setting_data['value'], 'updated_at': func.now()}
+        )
+        await db.execute(stmt)
+    
+    await db.commit()
+    
     return {"message": "Settings updated", "settings": settings}
 
 
@@ -364,5 +455,21 @@ async def get_audit_logs(
     db: AsyncSession = Depends(get_db)
 ):
     """Get audit logs (admin only)."""
-    # TODO: Implement when mcp_audit_log table is populated
-    return []
+    from app.models import McpAuditLog
+    
+    stmt = select(McpAuditLog).order_by(McpAuditLog.created_at.desc()).offset(offset).limit(limit)
+    result = await db.execute(stmt)
+    logs = result.scalars().all()
+    
+    return [
+        AuditLogEntry(
+            id=str(log.id),
+            user_id=str(log.user_id) if log.user_id else None,
+            action=log.tool_name,
+            resource_type="user" if log.tool_name in ["block_user", "unblock_user", "delete_user"] else None,
+            resource_id=log.tool_arguments.get("user_id") if log.tool_arguments and "user_id" in log.tool_arguments else None,
+            details=log.tool_arguments,
+            created_at=log.created_at,
+        )
+        for log in logs
+    ]

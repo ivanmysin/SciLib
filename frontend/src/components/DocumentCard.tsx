@@ -25,6 +25,14 @@ export function DocumentCard({ item, onClick, onContextMenu }: DocumentCardProps
       className="cursor-pointer transition-all hover:shadow-md hover:border-primary/50"
       onClick={onClick}
       onContextMenu={onContextMenu}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
     >
       <CardHeader className="pb-2">
         <div className="flex items-start gap-3">
@@ -37,7 +45,7 @@ export function DocumentCard({ item, onClick, onContextMenu }: DocumentCardProps
             </h3>
             <p className="text-sm text-muted-foreground mt-1">
               {authorText}
-              {item.year && `, ${item.year}`}
+              {item.year && ` (${item.year})`}
             </p>
           </div>
         </div>

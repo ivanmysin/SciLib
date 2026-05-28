@@ -25,7 +25,7 @@ export function LibraryPage() {
     },
   });
 
-  const filteredItems = items?.filter(item =>
+  const filteredItems = (items ?? []).filter(item =>
     item.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
